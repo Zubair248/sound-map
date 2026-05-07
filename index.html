@@ -148,7 +148,15 @@
         .now-playing-card {
             background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08));
             border: 1px solid rgba(99,102,241,0.15); border-radius: var(--radius-lg); padding: 20px;
+            position: relative;
         }
+        .now-playing-card::before {
+            content: '🎵 NOW PLAYING'; position: absolute; top: -10px; left: 16px;
+            background: var(--accent-gradient); color: #fff; font-size: 9px; font-weight: 700;
+            padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .now-playing-card.active::before { opacity: 1; }
         .np-header { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
         .np-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: pulse 2s infinite; display: none; }
         .np-dot.active { display: block; }
@@ -226,6 +234,10 @@
         }
         .sound-item:hover { background: rgba(99,102,241,0.06); border-color: var(--border-subtle); }
         .sound-item.playing { background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.2); }
+        .sound-num {
+            width: 24px; font-size: 11px; font-weight: 600; color: var(--text-muted);
+            text-align: center; flex-shrink: 0;
+        }
         .sound-avatar {
             width: 40px; height: 40px; border-radius: var(--radius-sm);
             background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.15));
@@ -234,6 +246,14 @@
         .sound-info { flex: 1; min-width: 0; }
         .sound-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .sound-meta { font-size: 11px; color: var(--text-muted); display: flex; gap: 8px; margin-top: 2px; }
+        .sound-play-btn {
+            width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--accent-primary);
+            background: var(--accent-gradient); color: #fff; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; font-size: 14px;
+            transition: all 0.2s; flex-shrink: 0; box-shadow: var(--shadow-glow);
+        }
+        .sound-play-btn:hover { transform: scale(1.1); }
+        .sound-item.playing .sound-play-btn { background: #22c55e; border-color: #22c55e; }
         .sound-fav {
             width: 30px; height: 30px; border-radius: 50%; border: none;
             background: transparent; color: var(--text-muted); cursor: pointer;
@@ -584,6 +604,8 @@
             audio.crossOrigin = 'anonymous';
             audio.play().then(() => {
                 isPlaying = true; updatePlayBtn(); startViz();
+                document.querySelector('.now-playing-card').classList.add('active');
+                showToast(`🎵 ${s.name.substring(0, 25)}`);
             }).catch(e => { showToast('⚠️ Click play to start'); isPlaying = false; updatePlayBtn(); });
             addToRecent(sound);
             renderList(currentCategory === 'all' ? allSounds : allSounds.filter(s => s.category === currentCategory));
@@ -626,13 +648,15 @@
         function renderList(data) {
             const list = document.getElementById('soundList');
             if (!data?.length) { list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-text">No sounds found</div></div>'; return; }
-            list.innerHTML = data.slice(0, 20).map(s => `
+            list.innerHTML = data.slice(0, 20).map((s, i) => `
                 <div class="sound-item ${currentSound?.id === s.id ? 'playing' : ''}" onclick="playSound(${s.id})">
+                    <div class="sound-num">${i + 1}</div>
                     <div class="sound-avatar">${s.icon}</div>
                     <div class="sound-info">
                         <div class="sound-name">${s.name.substring(0, 30)}</div>
                         <div class="sound-meta"><span>📍 ${s.location}</span><span>⏱ ${s.duration}</span></div>
                     </div>
+                    <button class="sound-play-btn" onclick="event.stopPropagation();playSound(${s.id})">▶</button>
                     <button class="sound-fav ${favorites.some(f => f.id === s.id) ? 'favorited' : ''}" onclick="event.stopPropagation();toggleFav(${s.id})">♥</button>
                 </div>
             `).join('');
@@ -660,7 +684,7 @@
                         return { id: 10000 + i, name: s.name, location: loc.name, category: 'search', lat: loc.lat, lng: loc.lng, icon: '🔍', duration: fmtDur(s.duration), plays: s.username, url: audioUrl };
                     }).filter(s => s.url);
                     renderList(searchResults);
-                    document.getElementById('listTitle').textContent = `🔍 "${q}" (${searchResults.length})`;
+                    document.getElementById('listTitle').textContent = `🔍 Found ${searchResults.length} sounds for "${q}"`;
                     showToast(`Found ${searchResults.length} sounds`);
                 } else {
                     const f = allSounds.filter(s => s.name.toLowerCase().includes(q.toLowerCase()) || s.location.toLowerCase().includes(q.toLowerCase()));
