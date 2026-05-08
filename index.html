@@ -499,11 +499,24 @@ if (window.firebaseReady) {
                     const data = doc.data();
                     userRole = data.role || 'user';
                     document.getElementById('umName').textContent = data.name || 'User';
-                    document.getElementById('umEmail').textContent = user.email;
                     document.getElementById('umAvatar').textContent = (data.name || 'U')[0].toUpperCase();
-                    document.getElementById('umRole').textContent = userRole === 'admin' ? 'Admin' : 'User';
-                    document.getElementById('adminMenuItem').style.display = userRole === 'admin' ? 'block' : 'none';
+                } else {
+                    // Check if email is admin
+                    userRole = ADMIN_EMAILS.includes(user.email) ? 'admin' : 'user';
+                    // Create user doc in Firestore
+                    await db.collection('users').doc(user.uid).set({
+                        name: user.displayName || 'User',
+                        email: user.email,
+                        role: userRole,
+                        status: 'active',
+                        createdAt: Date.now()
+                    });
+                    document.getElementById('umName').textContent = user.displayName || 'User';
+                    document.getElementById('umAvatar').textContent = (user.displayName || 'U')[0].toUpperCase();
                 }
+                document.getElementById('umEmail').textContent = user.email;
+                document.getElementById('umRole').textContent = userRole === 'admin' ? 'Admin' : 'User';
+                document.getElementById('adminMenuItem').style.display = userRole === 'admin' ? 'block' : 'none';
                 const favSnap = await db.collection('favorites').where('userId', '==', user.uid).get();
                 favorites = favSnap.docs.map(d => d.data().sound).filter(Boolean);
             } catch(e) { console.error(e); }
