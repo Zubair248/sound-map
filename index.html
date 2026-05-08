@@ -343,9 +343,9 @@
 <div id="toast"></div>
 
 <!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <script>
 // ===== FIREBASE INIT =====
@@ -359,9 +359,15 @@ const firebaseConfig = {
     appId: "1:171689070639:web:ed76ce33694c85526b76da",
     measurementId: "G-C4QRVPZQWD"
 };
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+try {
+    firebase.initializeApp(firebaseConfig);
+    var auth = firebase.auth();
+    var db = firebase.firestore();
+    window.firebaseReady = true;
+} catch(e) {
+    console.error('Firebase init error:', e);
+    window.firebaseReady = false;
+}
 
 // ===== CONFIG =====
 const API_KEY = 'dZufS9c6TGP11d0y8gWlw1voz3vkL9aCjOeeSrPw';
@@ -478,35 +484,37 @@ async function handleLogout() {
 }
 
 // Auth state listener
-auth.onAuthStateChanged(async user => {
-    currentUser = user;
-    if (user) {
-        document.getElementById('authButtons').style.display = 'none';
-        document.getElementById('userButtons').style.display = 'flex';
-        const initial = user.email ? user.email[0].toUpperCase() : 'U';
-        document.getElementById('userAvatarBtn').textContent = initial;
-        // Get user data
-        const doc = await db.collection('users').doc(user.uid).get();
-        if (doc.exists) {
-            const data = doc.data();
-            userRole = data.role || 'user';
-            document.getElementById('umName').textContent = data.name || 'User';
-            document.getElementById('umEmail').textContent = user.email;
-            document.getElementById('umAvatar').textContent = (data.name || 'U')[0].toUpperCase();
-            document.getElementById('umRole').textContent = userRole === 'admin' ? 'Admin' : 'User';
-            document.getElementById('adminMenuItem').style.display = userRole === 'admin' ? 'block' : 'none';
+if (window.firebaseReady) {
+    auth.onAuthStateChanged(async user => {
+        currentUser = user;
+        if (user) {
+            document.getElementById('authButtons').style.display = 'none';
+            document.getElementById('userButtons').style.display = 'flex';
+            const initial = user.email ? user.email[0].toUpperCase() : 'U';
+            document.getElementById('userAvatarBtn').textContent = initial;
+            try {
+                const doc = await db.collection('users').doc(user.uid).get();
+                if (doc.exists) {
+                    const data = doc.data();
+                    userRole = data.role || 'user';
+                    document.getElementById('umName').textContent = data.name || 'User';
+                    document.getElementById('umEmail').textContent = user.email;
+                    document.getElementById('umAvatar').textContent = (data.name || 'U')[0].toUpperCase();
+                    document.getElementById('umRole').textContent = userRole === 'admin' ? 'Admin' : 'User';
+                    document.getElementById('adminMenuItem').style.display = userRole === 'admin' ? 'block' : 'none';
+                }
+                const favSnap = await db.collection('favorites').where('userId', '==', user.uid).get();
+                favorites = favSnap.docs.map(d => d.data().sound).filter(Boolean);
+            } catch(e) { console.error(e); }
+        } else {
+            document.getElementById('authButtons').style.display = 'flex';
+            document.getElementById('userButtons').style.display = 'none';
+            userRole = 'user';
+            favorites = [];
         }
-        // Load favorites from cloud
-        const favSnap = await db.collection('favorites').where('userId', '==', user.uid).get();
-        favorites = favSnap.docs.map(d => d.data().sound).filter(Boolean);
-    } else {
-        document.getElementById('authButtons').style.display = 'flex';
-        document.getElementById('userButtons').style.display = 'none';
-        userRole = 'user';
-        favorites = [];
-    }
-    renderList(curCat === 'all' ? allSounds : allSounds.filter(s => s.cat === curCat));
-});
+        renderList(curCat === 'all' ? allSounds : allSounds.filter(s => s.cat === curCat));
+    });
+}
 
 function toggleUserMenu() { document.getElementById('userMenu').classList.toggle('open'); }
 function closeUserMenu() { document.getElementById('userMenu').classList.remove('open'); }
