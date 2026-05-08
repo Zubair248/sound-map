@@ -313,7 +313,7 @@
         <div class="um-item" onclick="openPanel('sleep');closeUserMenu()">😴 Sleep Timer</div>
         <div class="um-divider"></div>
         <div class="um-item" id="adminMenuItem" style="display:none;" onclick="openAdmin();closeUserMenu()">⚙️ Admin Panel</div>
-        <div class="um-item" onclick="openAuth('profile');closeUserMenu()">👤 Edit Profile</div>
+        <div class="um-item" onclick="openPanel('profile');closeUserMenu()">👤 Edit Profile</div>
         <div class="um-divider"></div>
         <div class="um-item danger" onclick="handleLogout()">🚪 Logout</div>
     </div>
@@ -693,9 +693,24 @@ function openPanel(type) {
     if (type==='fav') { title='❤️ Favorites'; html=favorites.length?favorites.map(s=>`<div class="s-card" onclick="playSound(${s.id})"><div class="s-ico">${s.icon}</div><div class="s-info"><div class="s-name">${s.name}</div><div class="s-meta"><span>📍 ${s.loc}</span></div></div></div>`).join(''):'<div style="padding:30px;text-align:center;color:var(--text3);font-size:13px;">💔 No favorites yet.<br><br>Tap ♥ on any sound.</div>'; }
     else if (type==='recent') { title='🕐 Recent'; html=recents.length?recents.map(s=>`<div class="s-card" onclick="playSound(${s.id})"><div class="s-ico">${s.icon}</div><div class="s-info"><div class="s-name">${s.name}</div><div class="s-meta"><span>📍 ${s.loc}</span></div></div></div>`).join(''):'<div style="padding:30px;text-align:center;color:var(--text3);font-size:13px;">🕐 No recent plays.</div>'; }
     else if (type==='sleep') { title='😴 Sleep Timer'; html=`<div style="text-align:center;color:var(--text2);font-size:12px;margin-bottom:14px;">Set timer to stop playback</div><div style="display:flex;flex-direction:column;gap:8px;max-width:250px;margin:0 auto;"><div class="cat-pill" style="text-align:center;padding:12px;" onclick="setSleep(15)">⏱ 15 min</div><div class="cat-pill" style="text-align:center;padding:12px;" onclick="setSleep(30)">⏱ 30 min</div><div class="cat-pill" style="text-align:center;padding:12px;" onclick="setSleep(60)">⏱ 1 hour</div></div>`; }
+    else if (type==='profile') {
+        title='👤 Edit Profile';
+                html=`<div style="padding:10px;"><div style="margin-bottom:12px;"><label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Full Name</label><input type="text" id="profName" placeholder="Your name" value="${currentUser ? (currentUser.displayName || '') : ''}" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg3);color:var(--text);font-size:13px;outline:none;"></div><div style="margin-bottom:12px;"><label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Email</label><input type="text" id="profEmail" disabled value="${currentUser ? currentUser.email : ''}" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg3);color:var(--text3);font-size:13px;"></div><button onclick="saveProfile()" style="width:100%;padding:10px;border:none;border-radius:10px;background:var(--grad);color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Save Changes</button></div>`;
+    }
     const t=document.getElementById('toast'); t.innerHTML=`<div style="text-align:left;"><div style="font-weight:600;margin-bottom:10px;font-size:14px;">${title}</div><div style="max-height:250px;overflow-y:auto;">${html}</div></div>`; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),4000);
 }
 function setSleep(min) { if(min>0){setTimeout(()=>{audio.pause();playing=false;updBtn();stopViz();},min*60000);toast(`😴 ${min} min timer`);} document.getElementById('toast').classList.remove('show'); }
+async function saveProfile() {
+    const name = document.getElementById('profName').value.trim();
+    if (!name) { toast('⚠️ Enter your name'); return; }
+    if (currentUser && window.firebaseReady) {
+        await db.collection('users').doc(currentUser.uid).update({ name });
+        document.getElementById('umName').textContent = name;
+        document.getElementById('umAvatar').textContent = name[0].toUpperCase();
+        toast('✅ Profile updated!');
+    } else { toast('⚠️ Not logged in'); }
+    document.getElementById('toast').classList.remove('show');
+}
 function toast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
 function resetMap() { map.setView([20,0],2); }
 document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='Space'){e.preventDefault();togglePlay();}else if(e.code==='ArrowRight')nextSound();else if(e.code==='ArrowLeft')prevSound();});
