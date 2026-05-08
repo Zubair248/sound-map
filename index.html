@@ -330,11 +330,11 @@
             <div class="stat-card"><div class="stat-label">Active Today</div><div class="stat-value" id="statActive">0</div></div>
         </div>
         <div class="admin-section">
-            <div class="admin-section-header"><span class="admin-section-title">👥 Users Management</span></div>
+            <div class="admin-section-header"><span class="admin-section-title">👥 Users Management</span><button class="action-btn" style="margin-left:auto;" onclick="showAddUser()">+ Add User</button></div>
             <table class="admin-table"><thead><tr><th>User</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody id="usersTable"></tbody></table>
         </div>
         <div class="admin-section">
-            <div class="admin-section-header"><span class="admin-section-title">🎵 Sounds Management</span></div>
+            <div class="admin-section-header"><span class="admin-section-title">🎵 Sounds Management</span><button class="action-btn" style="margin-left:auto;" onclick="showAddSound()">+ Add Sound</button></div>
             <table class="admin-table"><thead><tr><th>Sound</th><th>Category</th><th>Plays</th><th>Actions</th></tr></thead><tbody id="soundsTable"></tbody></table>
         </div>
     </div>
@@ -342,6 +342,35 @@
 
 <!-- Toast -->
 <div id="toast"></div>
+
+<!-- Add User Modal -->
+<div class="modal-overlay" id="addUserOverlay" onclick="if(event.target===this)closeAddUser()">
+    <div class="auth-modal" style="width:400px;">
+        <div class="auth-logo"><div class="auth-logo-icon" style="width:40px;height:40px;font-size:20px;">👤</div><div class="auth-logo-text" style="font-size:18px;">Add New User</div></div>
+        <div class="auth-error" id="addUserError"></div>
+        <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="newUserName" placeholder="John Doe"></div>
+        <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="newUserEmail" placeholder="john@example.com"></div>
+        <div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="newUserPass" placeholder="Min 6 characters"></div>
+        <div class="form-group"><label class="form-label">Role</label><select class="form-input" id="newUserRole"><option value="user">User</option><option value="admin">Admin</option></select></div>
+        <button class="auth-btn" onclick="addUser()">Create User</button>
+        <div style="text-align:center;margin-top:12px;"><a onclick="closeAddUser()" style="color:var(--text3);font-size:12px;cursor:pointer;">Cancel</a></div>
+    </div>
+</div>
+
+<!-- Add Sound Modal -->
+<div class="modal-overlay" id="addSoundOverlay" onclick="if(event.target===this)closeAddSound()">
+    <div class="auth-modal" style="width:450px;">
+        <div class="auth-logo"><div class="auth-logo-icon" style="width:40px;height:40px;font-size:20px;">🎵</div><div class="auth-logo-text" style="font-size:18px;">Add New Sound</div></div>
+        <div class="auth-error" id="addSoundError"></div>
+        <div class="form-group"><label class="form-label">Sound Name</label><input type="text" class="form-input" id="newSoundName" placeholder="e.g. Ocean Waves"></div>
+        <div class="form-group"><label class="form-label">Category</label><select class="form-input" id="newSoundCat"><option value="rain">🌧️ Rain</option><option value="ocean">🌊 Ocean</option><option value="forest">🌲 Forest</option><option value="city">🏙️ City</option><option value="nature">🌿 Nature</option><option value="market">🏪 Market</option><option value="temple">🛕 Spiritual</option></select></div>
+        <div class="form-group"><label class="form-label">Audio URL (MP3)</label><input type="url" class="form-input" id="newSoundUrl" placeholder="https://example.com/sound.mp3"></div>
+        <div class="form-group"><label class="form-label">Or Upload Audio File</label><input type="file" class="form-input" id="newSoundFile" accept="audio/*"></div>
+        <div class="form-group"><label class="form-label">Location</label><input type="text" class="form-input" id="newSoundLoc" placeholder="e.g. Paris, France"></div>
+        <button class="auth-btn" onclick="addSound()">Upload Sound</button>
+        <div style="text-align:center;margin-top:12px;"><a onclick="closeAddSound()" style="color:var(--text3);font-size:12px;cursor:pointer;">Cancel</a></div>
+    </div>
+</div>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -587,6 +616,67 @@ function deleteSound(id) {
     renderList(curCat === 'all' ? allSounds : allSounds.filter(s => s.cat === curCat));
     toast('✅ Sound removed');
     openAdmin();
+}
+
+// ===== ADD USER =====
+function showAddUser() { document.getElementById('addUserOverlay').classList.add('active'); }
+function closeAddUser() { document.getElementById('addUserOverlay').classList.remove('active'); document.getElementById('addUserError').classList.remove('show'); }
+async function addUser() {
+    const name = document.getElementById('newUserName').value.trim();
+    const email = document.getElementById('newUserEmail').value.trim();
+    const pass = document.getElementById('newUserPass').value;
+    const role = document.getElementById('newUserRole').value;
+    const err = document.getElementById('addUserError');
+    if (!name || !email || !pass) { err.textContent = '⚠️ Fill all fields'; err.classList.add('show'); return; }
+    if (pass.length < 6) { err.textContent = '⚠️ Password min 6 characters'; err.classList.add('show'); return; }
+    try {
+        const cred = await auth.createUserWithEmailAndPassword(email, pass);
+        await db.collection('users').doc(cred.user.uid).set({ name, email, role, status: 'active', createdAt: Date.now() });
+        closeAddUser();
+        toast('✅ User created!');
+        openAdmin();
+    } catch(e) { err.textContent = '⚠️ ' + e.message; err.classList.add('show'); }
+}
+
+// ===== ADD SOUND =====
+function showAddSound() { document.getElementById('addSoundOverlay').classList.add('active'); }
+function closeAddSound() { document.getElementById('addSoundOverlay').classList.remove('active'); document.getElementById('addSoundError').classList.remove('show'); }
+async function addSound() {
+    const name = document.getElementById('newSoundName').value.trim();
+    const cat = document.getElementById('newSoundCat').value;
+    const url = document.getElementById('newSoundUrl').value.trim();
+    const loc = document.getElementById('newSoundLoc').value.trim();
+    const file = document.getElementById('newSoundFile').files[0];
+    const err = document.getElementById('addSoundError');
+    if (!name) { err.textContent = '⚠️ Enter sound name'; err.classList.add('show'); return; }
+    if (!url && !file) { err.textContent = '⚠️ Provide audio URL or upload file'; err.classList.add('show'); return; }
+    try {
+        let audioUrl = url;
+        if (file) {
+            // For demo, we use a placeholder. In production, upload to Firebase Storage
+            err.textContent = '⚠️ File upload requires Firebase Storage setup. Use URL for now.'; err.classList.add('show');
+            return;
+        }
+        const newSound = {
+            id: Date.now(),
+            name,
+            loc: loc || 'Unknown',
+            cat,
+            lat: 20 + (Math.random() - 0.5) * 60,
+            lng: (Math.random() - 0.5) * 180,
+            icon: CATS[cat]?.icon || '🎵',
+            dur: '0:00',
+            plays: 'Admin',
+            url: audioUrl
+        };
+        allSounds.unshift(newSound);
+        // Save to Firestore
+        await db.collection('sounds').add({ ...newSound, createdAt: Date.now() });
+        closeAddSound();
+        toast('✅ Sound added!');
+        renderList(curCat === 'all' ? allSounds : allSounds.filter(s => s.cat === curCat));
+        openAdmin();
+    } catch(e) { err.textContent = '⚠️ ' + e.message; err.classList.add('show'); }
 }
 
 // ===== INIT =====
