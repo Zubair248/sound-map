@@ -497,7 +497,13 @@ if (window.firebaseReady) {
                 const doc = await db.collection('users').doc(user.uid).get();
                 if (doc.exists) {
                     const data = doc.data();
-                    userRole = data.role || 'user';
+                    // Check admin by email even if doc exists
+                    if (ADMIN_EMAILS.includes(user.email) && data.role !== 'admin') {
+                        await db.collection('users').doc(user.uid).update({ role: 'admin' });
+                        userRole = 'admin';
+                    } else {
+                        userRole = data.role || 'user';
+                    }
                     document.getElementById('umName').textContent = data.name || 'User';
                     document.getElementById('umAvatar').textContent = (data.name || 'U')[0].toUpperCase();
                 } else {
