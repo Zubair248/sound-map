@@ -5,141 +5,325 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sound Map — Explore the World Through Sound</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg: #09090f;
+            --bg2: #0f0f1a;
+            --bg3: #161625;
+            --card: rgba(22, 22, 37, 0.7);
+            --border: rgba(255,255,255,0.06);
+            --border2: rgba(255,255,255,0.1);
+            --text: #f1f5f9;
+            --text2: #94a3b8;
+            --text3: #64748b;
+            --accent: #6366f1;
+            --accent2: #8b5cf6;
+            --grad: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+            --grad2: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+            --green: #22c55e;
+            --red: #ef4444;
+            --radius: 14px;
+            --radius2: 20px;
+            --shadow: 0 4px 24px rgba(0,0,0,0.3);
+            --glow: 0 0 40px rgba(99,102,241,0.2);
+        }
+        .light-mode {
+            --bg: #f8fafc;
+            --bg2: #ffffff;
+            --bg3: #f1f5f9;
+            --card: rgba(255,255,255,0.8);
+            --border: rgba(0,0,0,0.08);
+            --border2: rgba(0,0,0,0.12);
+            --text: #0f172a;
+            --text2: #475569;
+            --text3: #94a3b8;
+            --shadow: 0 4px 24px rgba(0,0,0,0.08);
+        }
+
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a1a; color: #fff; height:100vh; overflow:hidden; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg); color: var(--text); height:100vh; overflow:hidden;
+            -webkit-font-smoothing: antialiased;
+        }
 
-        /* LOADING */
-        #loading { position:fixed; top:0; left:0; width:100%; height:100%; background:#0a0a1a; z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; transition:opacity .5s; }
-        #loading.hide { opacity:0; pointer-events:none; }
-        .load-spin { width:50px; height:50px; border:3px solid #333; border-top-color:#6366f1; border-radius:50%; animation:spin 1s linear infinite; margin-bottom:20px; }
+        /* ===== LOADING ===== */
+        #loader {
+            position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg);
+            z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center;
+            transition:opacity .6s;
+        }
+        #loader.hide { opacity:0; pointer-events:none; }
+        .loader-ring {
+            width:60px; height:60px; border:3px solid var(--bg3);
+            border-top-color:var(--accent); border-radius:50%;
+            animation:spin 1s linear infinite; margin-bottom:24px;
+        }
         @keyframes spin { to { transform:rotate(360deg); } }
+        .loader-text { font-size:18px; font-weight:700; margin-bottom:6px; background:var(--grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .loader-sub { font-size:13px; color:var(--text3); }
 
-        /* HEADER */
-        .header { position:fixed; top:0; left:0; right:0; z-index:1000; height:56px; background:rgba(10,10,26,.95); backdrop-filter:blur(10px); border-bottom:1px solid rgba(255,255,255,.06); display:flex; align-items:center; padding:0 16px; gap:12px; }
-        .logo { display:flex; align-items:center; gap:8px; cursor:pointer; flex-shrink:0; }
-        .logo-box { width:32px; height:32px; background:linear-gradient(135deg,#6366f1,#8b5cf6); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; }
-        .logo-name { font-size:17px; font-weight:700; background:linear-gradient(135deg,#6366f1,#a855f7); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-        .search-wrap { flex:1; max-width:420px; position:relative; }
-        .search-wrap input { width:100%; padding:8px 14px 8px 36px; border:1px solid rgba(255,255,255,.1); border-radius:20px; background:rgba(255,255,255,.06); color:#fff; font-size:13px; outline:none; }
-        .search-wrap input::placeholder { color:rgba(255,255,255,.35); }
-        .search-wrap input:focus { border-color:#6366f1; }
-        .search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:rgba(255,255,255,.35); font-size:13px; }
-        .header-btns { display:flex; gap:6px; flex-shrink:0; }
-        .h-btn { width:34px; height:34px; border-radius:50%; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.05); color:rgba(255,255,255,.6); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:14px; transition:all .2s; }
-        .h-btn:hover { background:rgba(255,255,255,.1); color:#fff; }
-        .h-btn.active { background:linear-gradient(135deg,#6366f1,#8b5cf6); border-color:transparent; color:#fff; }
+        /* ===== HEADER ===== */
+        .header {
+            position:fixed; top:0; left:0; right:0; z-index:1000; height:60px;
+            background:rgba(9,9,15,0.85); backdrop-filter:blur(20px);
+            border-bottom:1px solid var(--border); display:flex; align-items:center;
+            padding:0 20px; gap:16px;
+        }
+        .light-mode .header { background:rgba(248,250,252,0.9); }
 
-        /* MAP */
+        .logo-area { display:flex; align-items:center; gap:10px; cursor:pointer; flex-shrink:0; }
+        .logo-mark {
+            width:38px; height:38px; background:var(--grad); border-radius:10px;
+            display:flex; align-items:center; justify-content:center; font-size:20px;
+            box-shadow:var(--glow);
+        }
+        .logo-text { font-size:18px; font-weight:800; background:var(--grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+
+        .search-area { flex:1; max-width:500px; position:relative; }
+        .search-input {
+            width:100%; padding:10px 16px 10px 40px;
+            border:1px solid var(--border); border-radius:25px;
+            background:var(--bg3); color:var(--text); font-size:13px;
+            font-family:'Inter',sans-serif; outline:none; transition:all .3s;
+        }
+        .search-input::placeholder { color:var(--text3); }
+        .search-input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(99,102,241,0.15); }
+        .search-ico { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--text3); font-size:14px; }
+
+        .header-btns { display:flex; gap:8px; align-items:center; flex-shrink:0; }
+        .h-btn {
+            width:36px; height:36px; border-radius:50%; border:1px solid var(--border);
+            background:var(--bg3); color:var(--text2); cursor:pointer;
+            display:flex; align-items:center; justify-content:center; font-size:15px;
+            transition:all .2s;
+        }
+        .h-btn:hover { border-color:var(--border2); color:var(--text); }
+        .h-btn.active { background:var(--grad); border-color:transparent; color:#fff; }
+
+        /* ===== MAP ===== */
         #map { position:fixed; top:0; left:0; width:100%; height:100%; z-index:1; }
-        .custom-pin { background:linear-gradient(135deg,#6366f1,#8b5cf6); border-radius:50%; border:3px solid rgba(255,255,255,.9); box-shadow:0 2px 10px rgba(99,102,241,.4); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform .2s; }
-        .custom-pin:hover { transform:scale(1.25); }
-        .custom-pin.active-pin { background:linear-gradient(135deg,#f43f5e,#ec4899); animation:pinpulse 1.5s infinite; }
-        @keyframes pinpulse { 0%,100% { box-shadow:0 0 0 0 rgba(244,63,94,.4); } 50% { box-shadow:0 0 0 12px rgba(244,63,94,0); } }
 
-        .leaflet-popup-content-wrapper { background:rgba(15,15,35,.95); color:#fff; border-radius:12px; border:1px solid rgba(99,102,241,.3); }
-        .leaflet-popup-tip { background:rgba(15,15,35,.95); }
-        .popup-box { text-align:center; padding:4px; }
-        .popup-title { font-weight:600; font-size:13px; margin-bottom:4px; }
-        .popup-loc { font-size:11px; color:rgba(255,255,255,.5); margin-bottom:10px; }
-        .popup-play { background:linear-gradient(135deg,#6366f1,#8b5cf6); border:none; color:#fff; padding:6px 18px; border-radius:15px; cursor:pointer; font-size:11px; font-weight:600; }
+        .pin {
+            background:var(--grad); border-radius:50%; border:3px solid rgba(255,255,255,0.9);
+            box-shadow:0 2px 12px rgba(99,102,241,0.4);
+            display:flex; align-items:center; justify-content:center;
+            cursor:pointer; transition:transform .2s;
+        }
+        .pin:hover { transform:scale(1.3); }
+        .pin.active-pin {
+            background:linear-gradient(135deg,#f43f5e,#ec4899);
+            animation:pulse-pin 1.5s infinite;
+        }
+        @keyframes pulse-pin {
+            0%,100% { box-shadow:0 0 0 0 rgba(244,63,94,0.5); }
+            50% { box-shadow:0 0 0 14px rgba(244,63,94,0); }
+        }
 
-        /* SIDEBAR */
-        .sidebar { position:fixed; top:56px; right:-400px; width:380px; height:calc(100vh - 56px); background:rgba(12,12,24,.97); backdrop-filter:blur(20px); z-index:500; border-left:1px solid rgba(255,255,255,.06); overflow-y:auto; transition:right .35s cubic-bezier(.4,0,.2,1); }
-        .sidebar.open { right:0; }
-        .sb-header { padding:16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,.06); position:sticky; top:0; background:rgba(12,12,24,.97); z-index:10; }
-        .sb-header h3 { font-size:15px; font-weight:700; }
-        .sb-close { width:30px; height:30px; border-radius:50%; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.05); color:rgba(255,255,255,.6); cursor:pointer; display:flex; align-items:center; justify-content:center; }
-        .sb-close:hover { color:#fff; }
-        .sb-section { padding:16px; border-bottom:1px solid rgba(255,255,255,.04); }
-        .sb-label { font-size:11px; font-weight:600; color:rgba(255,255,255,.35); text-transform:uppercase; letter-spacing:.5px; margin-bottom:12px; }
+        .leaflet-popup-content-wrapper {
+            background:var(--bg2); color:var(--text); border-radius:var(--radius);
+            border:1px solid var(--border2); box-shadow:var(--shadow); padding:0;
+        }
+        .leaflet-popup-tip { background:var(--bg2); border:1px solid var(--border2); }
+        .popup-content { text-align:center; padding:8px 4px; }
+        .popup-title { font-weight:600; font-size:13px; margin-bottom:4px; color:var(--text); }
+        .popup-loc { font-size:11px; color:var(--text3); margin-bottom:10px; }
+        .popup-btn {
+            background:var(--grad); border:none; color:#fff;
+            padding:7px 20px; border-radius:20px; cursor:pointer;
+            font-size:11px; font-weight:600; font-family:'Inter',sans-serif;
+        }
 
-        /* NOW PLAYING CARD */
-        .npc { background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.08)); border:1px solid rgba(99,102,241,.15); border-radius:14px; padding:18px; position:relative; }
-        .npc-badge { display:inline-block; background:linear-gradient(135deg,#f43f5e,#ec4899); color:#fff; font-size:9px; font-weight:700; padding:3px 10px; border-radius:10px; letter-spacing:.5px; margin-bottom:10px; opacity:0; transition:opacity .3s; }
-        .npc-badge.show { opacity:1; }
-        .npc-title { font-size:16px; font-weight:700; margin-bottom:4px; line-height:1.4; }
-        .npc-loc { font-size:12px; color:rgba(255,255,255,.4); margin-bottom:16px; }
-        .viz-row { display:flex; align-items:flex-end; justify-content:center; gap:2px; height:36px; margin-bottom:14px; }
-        .viz-bar { width:4px; background:linear-gradient(to top,#6366f1,#a855f7); border-radius:2px; min-height:3px; transition:height .12s ease; }
-        .ctrl-row { display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:12px; }
-        .ctrl { width:38px; height:38px; border-radius:50%; border:none; background:rgba(255,255,255,.08); color:rgba(255,255,255,.7); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:14px; transition:all .2s; }
-        .ctrl:hover { background:rgba(255,255,255,.15); color:#fff; }
-        .ctrl.play { width:50px; height:50px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; font-size:18px; box-shadow:0 4px 20px rgba(99,102,241,.3); }
-        .ctrl.play:hover { transform:scale(1.08); }
-        .prog-wrap { width:100%; height:4px; background:rgba(255,255,255,.08); border-radius:4px; cursor:pointer; overflow:hidden; margin-bottom:6px; }
-        .prog-fill { height:100%; background:linear-gradient(90deg,#6366f1,#a855f7); border-radius:4px; width:0%; }
-        .time-row { display:flex; justify-content:space-between; font-size:10px; color:rgba(255,255,255,.35); margin-bottom:10px; }
-        .vol-row { display:flex; align-items:center; gap:8px; }
-        .vol-row input { flex:1; -webkit-appearance:none; height:3px; border-radius:3px; background:rgba(255,255,255,.08); outline:none; }
-        .vol-row input::-webkit-slider-thumb { -webkit-appearance:none; width:12px; height:12px; border-radius:50%; background:#6366f1; cursor:pointer; }
+        /* ===== MAIN LAYOUT ===== */
+        .main-layout {
+            position:fixed; top:60px; left:0; right:0; bottom:0; z-index:10;
+            display:flex; pointer-events:none;
+        }
 
-        /* CATEGORIES */
-        .cats { display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; }
-        .cats::-webkit-scrollbar { display:none; }
-        .cat { flex-shrink:0; padding:7px 14px; border-radius:20px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:rgba(255,255,255,.5); font-size:11px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; }
-        .cat:hover { border-color:rgba(255,255,255,.2); color:rgba(255,255,255,.8); }
-        .cat.active { background:linear-gradient(135deg,#6366f1,#8b5cf6); border-color:transparent; color:#fff; box-shadow:0 2px 12px rgba(99,102,241,.3); }
+        /* LEFT PANEL - Sound List */
+        .left-panel {
+            width:340px; height:100%; background:var(--bg2);
+            border-right:1px solid var(--border); display:flex; flex-direction:column;
+            pointer-events:auto; overflow:hidden;
+        }
+        .lp-header {
+            padding:16px; border-bottom:1px solid var(--border);
+            display:flex; justify-content:space-between; align-items:center; flex-shrink:0;
+        }
+        .lp-title { font-size:16px; font-weight:700; }
+        .lp-count { font-size:12px; color:var(--text3); background:var(--bg3); padding:3px 10px; border-radius:10px; }
 
-        /* SOUND LIST */
-        .s-item { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:10px; cursor:pointer; transition:all .15s; border:1px solid transparent; margin-bottom:4px; }
-        .s-item:hover { background:rgba(99,102,241,.06); border-color:rgba(99,102,241,.1); }
-        .s-item.playing { background:rgba(99,102,241,.12); border-color:rgba(99,102,241,.25); }
-        .s-num { width:20px; font-size:10px; font-weight:600; color:rgba(255,255,255,.25); text-align:center; flex-shrink:0; }
-        .s-icon { width:38px; height:38px; border-radius:8px; background:linear-gradient(135deg,rgba(99,102,241,.18),rgba(139,92,246,.12)); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+        .cats-scroll {
+            display:flex; gap:6px; padding:12px 16px; overflow-x:auto;
+            border-bottom:1px solid var(--border); flex-shrink:0;
+        }
+        .cats-scroll::-webkit-scrollbar { display:none; }
+        .cat-pill {
+            flex-shrink:0; padding:7px 14px; border-radius:20px;
+            border:1px solid var(--border); background:var(--bg3);
+            color:var(--text2); font-size:11px; font-weight:500;
+            cursor:pointer; transition:all .2s; white-space:nowrap;
+        }
+        .cat-pill:hover { border-color:var(--border2); color:var(--text); }
+        .cat-pill.active { background:var(--grad); border-color:transparent; color:#fff; }
+
+        .sounds-scroll { flex:1; overflow-y:auto; padding:8px; }
+
+        .s-card {
+            display:flex; align-items:center; gap:10px; padding:10px 12px;
+            border-radius:var(--radius); cursor:pointer; transition:all .15s;
+            border:1px solid transparent; margin-bottom:4px;
+        }
+        .s-card:hover { background:var(--card); border-color:var(--border); }
+        .s-card.playing { background:rgba(99,102,241,0.1); border-color:rgba(99,102,241,0.25); }
+        .s-num { width:22px; font-size:10px; font-weight:700; color:var(--text3); text-align:center; flex-shrink:0; }
+        .s-ico {
+            width:40px; height:40px; border-radius:10px; flex-shrink:0;
+            background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.1));
+            display:flex; align-items:center; justify-content:center; font-size:18px;
+        }
         .s-info { flex:1; min-width:0; }
-        .s-name { font-size:12px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .s-meta { font-size:10px; color:rgba(255,255,255,.3); display:flex; gap:8px; margin-top:2px; }
-        .s-play { width:34px; height:34px; border-radius:50%; border:2px solid #6366f1; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; transition:all .2s; box-shadow:0 2px 10px rgba(99,102,241,.3); }
-        .s-play:hover { transform:scale(1.12); }
-        .s-item.playing .s-play { background:linear-gradient(135deg,#22c55e,#16a34a); border-color:#22c55e; }
-        .s-fav { width:28px; height:28px; border-radius:50%; border:none; background:transparent; color:rgba(255,255,255,.25); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
-        .s-fav:hover { color:#f43f5e; }
-        .s-fav.favd { color:#f43f5e; }
+        .s-name { font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .s-meta { font-size:11px; color:var(--text3); display:flex; gap:8px; margin-top:2px; }
+        .s-play {
+            width:36px; height:36px; border-radius:50%; flex-shrink:0; border:none;
+            background:var(--grad); color:#fff; cursor:pointer;
+            display:flex; align-items:center; justify-content:center; font-size:13px;
+            transition:all .2s; box-shadow:0 2px 10px rgba(99,102,241,0.3);
+        }
+        .s-play:hover { transform:scale(1.1); }
+        .s-card.playing .s-play { background:linear-gradient(135deg,#22c55e,#16a34a); }
+        .s-fav {
+            width:30px; height:30px; border-radius:50%; border:none; background:transparent;
+            color:var(--text3); cursor:pointer; display:flex; align-items:center;
+            justify-content:center; font-size:14px; flex-shrink:0; transition:color .2s;
+        }
+        .s-fav:hover { color:var(--red); }
+        .s-fav.favd { color:var(--red); }
 
-        /* BOTTOM BAR */
-        .botbar { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:600; display:flex; gap:6px; padding:6px; background:rgba(12,12,24,.92); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,.06); border-radius:20px; box-shadow:0 8px 30px rgba(0,0,0,.4); }
-        .bnav { display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 12px; border-radius:12px; border:none; background:transparent; color:rgba(255,255,255,.4); cursor:pointer; transition:all .2s; font-size:9px; font-weight:500; font-family:inherit; }
-        .bnav:hover { color:rgba(255,255,255,.7); }
-        .bnav.active { color:#6366f1; background:rgba(99,102,241,.1); }
-        .bnav-ico { font-size:18px; }
+        /* RIGHT PLAYER PANEL */
+        .right-panel {
+            position:fixed; bottom:0; left:340px; right:0; z-index:20;
+            background:var(--bg2); border-top:1px solid var(--border);
+            padding:16px 20px; pointer-events:auto;
+        }
+        .player-inner { max-width:700px; margin:0 auto; }
+        .player-row { display:flex; align-items:center; gap:16px; }
 
-        /* TOAST */
-        #toast { position:fixed; bottom:70px; left:50%; transform:translateX(-50%) translateY(16px); background:rgba(20,20,40,.95); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.08); padding:8px 18px; border-radius:20px; font-size:12px; color:rgba(255,255,255,.9); z-index:9999; opacity:0; transition:all .3s ease; pointer-events:none; white-space:nowrap; }
+        .now-badge {
+            display:inline-flex; align-items:center; gap:5px;
+            background:linear-gradient(135deg,#f43f5e,#ec4899);
+            color:#fff; font-size:9px; font-weight:700; padding:3px 10px;
+            border-radius:8px; letter-spacing:.5px; margin-bottom:8px;
+        }
+        .now-badge.hidden { display:none; }
+
+        .viz-area { display:flex; align-items:flex-end; gap:2px; height:32px; flex:1; }
+        .v-bar {
+            width:4px; min-height:3px; border-radius:2px;
+            background:var(--grad); transition:height .12s ease;
+        }
+
+        .p-info { flex:1; min-width:0; }
+        .p-title { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .p-sub { font-size:11px; color:var(--text3); }
+
+        .p-ctrls { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+        .p-ctrl {
+            width:36px; height:36px; border-radius:50%; border:none;
+            background:var(--bg3); color:var(--text2); cursor:pointer;
+            display:flex; align-items:center; justify-content:center; font-size:14px;
+            transition:all .2s;
+        }
+        .p-ctrl:hover { color:var(--text); }
+        .p-ctrl.play-btn {
+            width:46px; height:46px; background:var(--grad); color:#fff;
+            font-size:18px; box-shadow:var(--glow);
+        }
+        .p-ctrl.play-btn:hover { transform:scale(1.08); }
+
+        .p-prog { margin-top:10px; display:flex; align-items:center; gap:10px; }
+        .p-bar { flex:1; height:4px; background:var(--bg3); border-radius:4px; cursor:pointer; overflow:hidden; }
+        .p-fill { height:100%; background:var(--grad); border-radius:4px; width:0%; transition:width .1s linear; }
+        .p-time { font-size:10px; color:var(--text3); flex-shrink:0; }
+
+        .p-vol { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+        .p-vol input { width:80px; -webkit-appearance:none; height:3px; border-radius:3px; background:var(--bg3); outline:none; }
+        .p-vol input::-webkit-slider-thumb { -webkit-appearance:none; width:12px; height:12px; border-radius:50%; background:var(--accent); cursor:pointer; }
+
+        /* ===== BOTTOM NAV (MOBILE) ===== */
+        .bot-nav {
+            position:fixed; bottom:0; left:0; right:0; z-index:100;
+            background:var(--bg2); border-top:1px solid var(--border);
+            display:none; padding:6px 12px; justify-content:space-around;
+        }
+        .bn {
+            display:flex; flex-direction:column; align-items:center; gap:2px;
+            padding:6px 12px; border-radius:10px; border:none; background:transparent;
+            color:var(--text3); cursor:pointer; transition:all .2s;
+            font-size:9px; font-weight:500; font-family:'Inter',sans-serif;
+        }
+        .bn:hover { color:var(--text); }
+        .bn.active { color:var(--accent); }
+        .bn-ico { font-size:20px; }
+
+        /* ===== TOAST ===== */
+        #toast {
+            position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(16px);
+            background:var(--bg2); border:1px solid var(--border2);
+            backdrop-filter:blur(10px); padding:10px 22px; border-radius:25px;
+            font-size:13px; color:var(--text); z-index:9999;
+            opacity:0; transition:all .3s ease; pointer-events:none; white-space:nowrap;
+            box-shadow:var(--shadow);
+        }
         #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
-        /* SCROLLBAR */
-        ::-webkit-scrollbar { width:4px; }
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar { width:5px; }
         ::-webkit-scrollbar-track { background:transparent; }
-        ::-webkit-scrollbar-thumb { background:rgba(99,102,241,.2); border-radius:2px; }
+        ::-webkit-scrollbar-thumb { background:rgba(99,102,241,0.2); border-radius:3px; }
 
-        @media(max-width:600px) {
-            .logo-name { display:none; }
-            .sidebar { width:100%; right:-100%; }
-            .search-wrap { max-width:200px; }
+        /* ===== RESPONSIVE ===== */
+        @media(max-width:900px) {
+            .left-panel { width:280px; }
+            .right-panel { left:280px; }
+        }
+        @media(max-width:700px) {
+            .header { padding:0 12px; gap:10px; height:52px; }
+            .logo-text { display:none; }
+            .search-area { max-width:200px; }
+            .left-panel { display:none; }
+            .right-panel { left:0; bottom:56px; padding:12px 16px; }
+            .bot-nav { display:flex; }
+            .p-ctrls { gap:6px; }
+            .p-ctrl { width:32px; height:32px; font-size:12px; }
+            .p-ctrl.play-btn { width:40px; height:40px; font-size:16px; }
+            .p-vol input { width:60px; }
         }
     </style>
 </head>
 <body>
 
 <!-- Loading -->
-<div id="loading">
-    <div class="load-spin"></div>
-    <div style="font-size:14px; color:rgba(255,255,255,.4);">Loading Sound Map...</div>
+<div id="loader">
+    <div class="loader-ring"></div>
+    <div class="loader-text">Sound Map</div>
+    <div class="loader-sub">Loading sounds from around the world...</div>
 </div>
 
 <!-- Header -->
 <header class="header">
-    <div class="logo" onclick="resetMap()">
-        <div class="logo-box">🌍</div>
-        <span class="logo-name">Sound Map</span>
+    <div class="logo-area" onclick="resetMap()">
+        <div class="logo-mark">🌍</div>
+        <span class="logo-text">Sound Map</span>
     </div>
-    <div class="search-wrap">
-        <span class="search-icon">🔍</span>
-        <input type="text" placeholder="Search rain, ocean, forest..." id="searchInput" onkeydown="if(event.key==='Enter')doSearch(this.value)">
+    <div class="search-area">
+        <span class="search-ico">🔍</span>
+        <input type="text" class="search-input" placeholder="Search rain, ocean, forest, city..." id="searchInput" onkeydown="if(event.key==='Enter')doSearch(this.value)">
     </div>
     <div class="header-btns">
-        <button class="h-btn" onclick="toggleSidebar()" title="Sounds">☰</button>
+        <button class="h-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
         <button class="h-btn" onclick="openPanel('fav')" title="Favorites">❤️</button>
     </div>
 </header>
@@ -147,58 +331,60 @@
 <!-- Map -->
 <div id="map"></div>
 
-<!-- Sidebar -->
-<aside class="sidebar" id="sidebar">
-    <div class="sb-header">
-        <h3 id="sbTitle">🎵 All Sounds</h3>
-        <button class="sb-close" onclick="toggleSidebar()">✕</button>
+<!-- Main Layout -->
+<div class="main-layout">
+    <!-- Left Panel - Sound List -->
+    <div class="left-panel">
+        <div class="lp-header">
+            <span class="lp-title" id="lpTitle">🎵 All Sounds</span>
+            <span class="lp-count" id="lpCount">0 sounds</span>
+        </div>
+        <div class="cats-scroll" id="catsScroll"></div>
+        <div class="sounds-scroll" id="soundsList"></div>
     </div>
+</div>
 
-    <div class="sb-section">
-        <div class="npc" id="npc">
-            <div class="npc-badge" id="npcBadge">🎵 NOW PLAYING</div>
-            <div class="npc-title" id="npcTitle">Select a sound to play</div>
-            <div class="npc-loc" id="npcLoc">Browse the list below or search</div>
-            <div class="viz-row" id="vizRow"></div>
-            <div class="ctrl-row">
-                <button class="ctrl" onclick="prevSound()">⏮</button>
-                <button class="ctrl play" id="playBtn" onclick="togglePlay()">▶</button>
-                <button class="ctrl" onclick="nextSound()">⏭</button>
+<!-- Right/Bottom Player -->
+<div class="right-panel">
+    <div class="player-inner">
+        <div class="now-badge hidden" id="nowBadge">● NOW PLAYING</div>
+        <div class="player-row">
+            <div class="viz-area" id="vizArea"></div>
+            <div class="p-info">
+                <div class="p-title" id="pTitle">Select a sound to play</div>
+                <div class="p-sub" id="pSub">Browse the list or search above</div>
             </div>
-            <div class="prog-wrap" id="progWrap"><div class="prog-fill" id="progFill"></div></div>
-            <div class="time-row"><span id="tCur">0:00</span><span id="tTot">0:00</span></div>
-            <div class="vol-row">
+            <div class="p-ctrls">
+                <button class="p-ctrl" onclick="prevSound()">⏮</button>
+                <button class="p-ctrl play-btn" id="playBtn" onclick="togglePlay()">▶</button>
+                <button class="p-ctrl" onclick="nextSound()">⏭</button>
+            </div>
+        </div>
+        <div class="p-prog">
+            <div class="p-bar" id="progBar"><div class="p-fill" id="progFill"></div></div>
+            <span class="p-time" id="pTime">0:00 / 0:00</span>
+            <div class="p-vol">
                 <span>🔈</span>
                 <input type="range" min="0" max="100" value="80" oninput="setVol(this.value)">
                 <span>🔊</span>
             </div>
         </div>
     </div>
+</div>
 
-    <div class="sb-section">
-        <div class="sb-label">Categories</div>
-        <div class="cats" id="cats"></div>
-    </div>
-
-    <div class="sb-section">
-        <div class="sb-label" id="listLabel">🔥 All Sounds</div>
-        <div id="soundList"></div>
-    </div>
-</aside>
-
-<!-- Bottom Bar -->
-<nav class="botbar">
-    <button class="bnav active" onclick="filterCat('all')">
-        <span class="bnav-ico">🌍</span>Explore
+<!-- Bottom Nav (Mobile) -->
+<nav class="bot-nav" id="botNav">
+    <button class="bn active" onclick="showAll()">
+        <span class="bn-ico">🌍</span>Explore
     </button>
-    <button class="bnav" onclick="openPanel('fav')">
-        <span class="bnav-ico">❤️</span>Favorites
+    <button class="bn" onclick="openPanel('fav')">
+        <span class="bn-ico">❤️</span>Favorites
     </button>
-    <button class="bnav" onclick="openPanel('sleep')">
-        <span class="bnav-ico">😴</span>Sleep
+    <button class="bn" onclick="openPanel('sleep')">
+        <span class="bn-ico">😴</span>Sleep
     </button>
-    <button class="bnav" onclick="openPanel('recent')">
-        <span class="bnav-ico">🕐</span>Recent
+    <button class="bn" onclick="openPanel('recent')">
+        <span class="bn-ico">🕐</span>Recent
     </button>
 </nav>
 
@@ -214,58 +400,66 @@ const CATS = {
     rain: { q: 'rain ambient', icon: '🌧️' },
     ocean: { q: 'ocean waves', icon: '🌊' },
     forest: { q: 'forest nature', icon: '🌲' },
-    city: { q: 'city traffic ambience', icon: '🏙️' },
+    city: { q: 'city traffic', icon: '🏙️' },
     nature: { q: 'birds nature', icon: '🌿' },
     market: { q: 'market bazaar', icon: '🏪' },
-    temple: { q: 'temple bells meditation', icon: '🛕' }
+    temple: { q: 'temple meditation', icon: '🛕' }
 };
 
 const LOCS = [
     { n: 'Paris, France', lat: 48.8566, lng: 2.3522 },
-    { n: 'Tokyo, Japan', lat: 35.6762, lng: 139.6503 },
-    { n: 'Mumbai, India', lat: 19.0760, lng: 72.8777 },
-    { n: 'London, UK', lat: 51.5074, lng: -0.1278 },
-    { n: 'New York, USA', lat: 40.7128, lng: -74.0060 },
+    { n: 'Tokyo', lat: 35.6762, lng: 139.6503 },
+    { n: 'Mumbai', lat: 19.0760, lng: 72.8777 },
+    { n: 'London', lat: 51.5074, lng: -0.1278 },
+    { n: 'New York', lat: 40.7128, lng: -74.0060 },
     { n: 'Maldives', lat: 3.2028, lng: 73.2207 },
-    { n: 'Sydney, Australia', lat: -33.8688, lng: 151.2093 },
-    { n: 'Amazon, Brazil', lat: -3.4653, lng: -62.2159 },
+    { n: 'Sydney', lat: -33.8688, lng: 151.2093 },
+    { n: 'Amazon', lat: -3.4653, lng: -62.2159 },
     { n: 'Swiss Alps', lat: 46.8182, lng: 8.2275 },
     { n: 'Iceland', lat: 64.9631, lng: -19.0208 },
-    { n: 'Bali, Indonesia', lat: -8.3405, lng: 115.0920 },
-    { n: 'Istanbul, Turkey', lat: 41.0082, lng: 28.9784 },
-    { n: 'Lahore, Pakistan', lat: 31.5204, lng: 74.3587 },
-    { n: 'Karachi, Pakistan', lat: 24.8607, lng: 67.0011 },
-    { n: 'Dubai, UAE', lat: 25.2048, lng: 55.2708 },
+    { n: 'Bali', lat: -8.3405, lng: 115.0920 },
+    { n: 'Istanbul', lat: 41.0082, lng: 28.9784 },
+    { n: 'Lahore', lat: 31.5204, lng: 74.3587 },
+    { n: 'Karachi', lat: 24.8607, lng: 67.0011 },
+    { n: 'Dubai', lat: 25.2048, lng: 55.2708 },
 ];
 
 let map, audio = new Audio(), curSound = null, playing = false;
 let allSounds = [], searchResults = [], favorites = [], recents = [];
-let curCat = 'all', markers = [], vizTimer = null;
+let curCat = 'all', vizTimer = null;
+
+// THEME
+let isDark = true;
+function toggleTheme() {
+    isDark = !isDark;
+    document.body.classList.toggle('light-mode', !isDark);
+    document.getElementById('themeBtn').textContent = isDark ? '🌙' : '☀️';
+    toast(isDark ? '🌙 Dark mode' : '☀️ Light mode');
+}
 
 // INIT
 async function init() {
     map = L.map('map', { zoomControl: false, attributionControl: false }).setView([20, 0], 2);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+    L.tileLayer(`https://{s}.basemaps.cartocdn.com/${isDark ? 'dark_all' : 'light_all'}/{z}/{x}/{y}{r}.png`, { maxZoom: 19 }).addTo(map);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // Visualizer bars
-    const viz = document.getElementById('vizRow');
-    for (let i = 0; i < 20; i++) { const b = document.createElement('div'); b.className = 'viz-bar'; b.style.height = '3px'; viz.appendChild(b); }
+    // Visualizer
+    const viz = document.getElementById('vizArea');
+    for (let i = 0; i < 30; i++) { const b = document.createElement('div'); b.className = 'v-bar'; b.style.height = '3px'; viz.appendChild(b); }
 
     // Categories
-    const cats = document.getElementById('cats');
-    cats.innerHTML = `<div class="cat active" onclick="filterCat('all')" id="cat-all">🌍 All</div>` +
-        Object.entries(CATS).map(([k, v]) => `<div class="cat" onclick="filterCat('${k}')" id="cat-${k}">${v.icon} ${k.charAt(0).toUpperCase() + k.slice(1)}</div>`).join('');
+    const cats = document.getElementById('catsScroll');
+    cats.innerHTML = `<div class="cat-pill active" data-cat="all" onclick="filterCat('all')">🌍 All</div>` +
+        Object.entries(CATS).map(([k,v]) => `<div class="cat-pill" data-cat="${k}" onclick="filterCat('${k}')">${v.icon} ${k.charAt(0).toUpperCase()+k.slice(1)}</div>`).join('');
 
     await loadSounds();
     renderList(allSounds);
 
-    setTimeout(() => document.getElementById('loading').classList.add('hide'), 1500);
+    setTimeout(() => document.getElementById('loader').classList.add('hide'), 1500);
 }
 
 async function loadSounds() {
-    allSounds = [];
-    let id = 1;
+    allSounds = []; let id = 1;
     for (const [cat, info] of Object.entries(CATS)) {
         try {
             const url = `${API_BASE}/search/text/?query=${encodeURIComponent(info.q)}&fields=id,name,previews,duration,username&page_size=8&token=${API_KEY}`;
@@ -275,172 +469,168 @@ async function loadSounds() {
                 data.results.forEach((s, i) => {
                     const loc = LOCS[i % LOCS.length];
                     const au = s.previews?.['preview-hq-mp3'] || s.previews?.['preview-lq-mp3'];
-                    if (au) allSounds.push({ id: id++, name: s.name, loc: loc.n, cat, lat: loc.lat + (Math.random()-.5)*5, lng: loc.lng + (Math.random()-.5)*5, icon: info.icon, dur: fmtDur(s.duration), by: s.username, url: au });
+                    if (au) allSounds.push({ id:id++, name:s.name, loc:loc.n, cat, lat:loc.lat+(Math.random()-.5)*5, lng:loc.lng+(Math.random()-.5)*5, icon:info.icon, dur:fmtDur(s.duration), by:s.username, url:au });
                 });
             }
-        } catch (e) { console.error(e); }
+        } catch(e) { console.error(e); }
     }
     addMarkers();
+    document.getElementById('lpCount').textContent = `${allSounds.length} sounds`;
 }
 
 function addMarkers() {
     allSounds.forEach(s => {
-        const icon = L.divIcon({ className: 'custom-pin', html: `<div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:15px;">${s.icon}</div>`, iconSize: [32, 32], iconAnchor: [16, 16] });
-        const m = L.marker([s.lat, s.lng], { icon }).addTo(map);
-        m.bindPopup(`<div class="popup-box"><div class="popup-title">${s.icon} ${s.name.substring(0,28)}</div><div class="popup-loc">📍 ${s.loc}</div><button class="popup-play" onclick="playSound(${s.id})">▶ Play</button></div>`);
-        markers.push({ m, s });
+        const ico = L.divIcon({ className:'pin', html:`<div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;">${s.icon}</div>`, iconSize:[32,32], iconAnchor:[16,16] });
+        const m = L.marker([s.lat, s.lng], { icon:ico }).addTo(map);
+        m.bindPopup(`<div class="popup-content"><div class="popup-title">${s.icon} ${s.name.substring(0,28)}</div><div class="popup-loc">📍 ${s.loc}</div><button class="popup-btn" onclick="playSound(${s.id})">▶ Play</button></div>`);
     });
 }
 
 // PLAYER
 function playSound(id) {
-    const s = allSounds.find(x => x.id === id) || searchResults.find(x => x.id === id);
+    const s = allSounds.find(x=>x.id===id) || searchResults.find(x=>x.id===id);
     if (!s?.url) { toast('⚠️ No audio'); return; }
     audio.pause(); audio.src = '';
     curSound = s;
-    document.getElementById('npcTitle').textContent = s.name;
-    document.getElementById('npcLoc').textContent = `📍 ${s.loc}`;
-    document.getElementById('npcBadge').classList.add('show');
+    document.getElementById('pTitle').textContent = s.name;
+    document.getElementById('pSub').textContent = `📍 ${s.loc}`;
+    document.getElementById('nowBadge').classList.remove('hidden');
     audio.src = s.url; audio.crossOrigin = 'anonymous';
-    audio.play().then(() => { playing = true; updateBtn(); startViz(); toast(`🎵 ${s.name.substring(0,24)}`); }).catch(() => { playing = false; updateBtn(); });
-    addRecent(s); renderList(curCat === 'all' ? allSounds : allSounds.filter(x => x.cat === curCat));
-    audio.ontimeupdate = () => { document.getElementById('progFill').style.width = ((audio.currentTime / audio.duration) * 100 || 0) + '%'; document.getElementById('tCur').textContent = fmtDur(audio.currentTime); document.getElementById('tTot').textContent = fmtDur(audio.duration || 0); };
-    audio.onended = () => { playing = false; updateBtn(); stopViz(); nextSound(); };
+    audio.play().then(()=>{ playing=true; updBtn(); startViz(); toast(`🎵 ${s.name.substring(0,25)}`); }).catch(()=>{ playing=false; updBtn(); });
+    addRecent(s); renderList(curCat==='all'?allSounds:allSounds.filter(x=>x.cat===curCat));
+    audio.ontimeupdate = () => {
+        const pct = (audio.currentTime/audio.duration)*100||0;
+        document.getElementById('progFill').style.width = pct+'%';
+        document.getElementById('pTime').textContent = `${fmtDur(audio.currentTime)} / ${fmtDur(audio.duration||0)}`;
+    };
+    audio.onended = ()=>{ playing=false; updBtn(); stopViz(); nextSound(); };
 }
 function togglePlay() {
-    if (!curSound) { if (allSounds.length) playSound(allSounds[0].id); return; }
-    if (playing) { audio.pause(); playing = false; stopViz(); } else { audio.play(); playing = true; startViz(); }
-    updateBtn();
+    if (!curSound) { if(allSounds.length) playSound(allSounds[0].id); return; }
+    if (playing) { audio.pause(); playing=false; stopViz(); } else { audio.play(); playing=true; startViz(); }
+    updBtn();
 }
-function updateBtn() { document.getElementById('playBtn').textContent = playing ? '⏸' : '▶'; }
-function nextSound() { const c = curCat === 'all' ? allSounds : allSounds.filter(x => x.cat === curCat); const i = c.findIndex(x => x.id === curSound?.id); if (c.length) playSound(c[(i+1)%c.length].id); }
-function prevSound() { const c = curCat === 'all' ? allSounds : allSounds.filter(x => x.cat === curCat); const i = c.findIndex(x => x.id === curSound?.id); if (c.length) playSound(c[(i-1+c.length)%c.length].id); }
-function seekAudio(e) { const r = e.currentTarget.getBoundingClientRect(); audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration; }
-function setVol(v) { audio.volume = v / 100; }
-function fmtDur(s) { if (!s || isNaN(s)) return '0:00'; return `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`; }
+function updBtn() { document.getElementById('playBtn').textContent = playing ? '⏸' : '▶'; }
+function nextSound() { const c=curCat==='all'?allSounds:allSounds.filter(x=>x.cat===curCat); const i=c.findIndex(x=>x.id===curSound?.id); if(c.length) playSound(c[(i+1)%c.length].id); }
+function prevSound() { const c=curCat==='all'?allSounds:allSounds.filter(x=>x.cat===curCat); const i=c.findIndex(x=>x.id===curSound?.id); if(c.length) playSound(c[(i-1+c.length)%c.length].id); }
+function seekAudio(e) { const r=e.currentTarget.getBoundingClientRect(); audio.currentTime=((e.clientX-r.left)/r.width)*audio.duration; }
+function setVol(v) { audio.volume=v/100; }
+function fmtDur(s) { if(!s||isNaN(s)) return '0:00'; return `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`; }
 
-// VISUALIZER
-function startViz() { stopViz(); vizTimer = setInterval(() => { document.querySelectorAll('.viz-bar').forEach(b => b.style.height = (Math.random()*30+3) + 'px'); }, 100); }
-function stopViz() { clearInterval(vizTimer); document.querySelectorAll('.viz-bar').forEach(b => b.style.height = '3px'); }
+function startViz() { stopViz(); vizTimer=setInterval(()=>{ document.querySelectorAll('.v-bar').forEach(b=>b.style.height=(Math.random()*28+3)+'px'); },100); }
+function stopViz() { clearInterval(vizTimer); document.querySelectorAll('.v-bar').forEach(b=>b.style.height='3px'); }
 
 // LIST
 function renderList(data) {
-    const list = document.getElementById('soundList');
-    if (!data?.length) { list.innerHTML = '<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:12px;">No sounds found</div>'; return; }
-    list.innerHTML = data.slice(0, 20).map((s, i) => `
-        <div class="s-item ${curSound?.id === s.id ? 'playing' : ''}" onclick="playSound(${s.id})">
+    const list = document.getElementById('soundsList');
+    if (!data?.length) { list.innerHTML='<div style="padding:30px;text-align:center;color:var(--text3);font-size:13px;">No sounds found</div>'; return; }
+    list.innerHTML = data.slice(0,25).map((s,i) => `
+        <div class="s-card ${curSound?.id===s.id?'playing':''}" onclick="playSound(${s.id})">
             <div class="s-num">${i+1}</div>
-            <div class="s-icon">${s.icon}</div>
+            <div class="s-ico">${s.icon}</div>
             <div class="s-info">
-                <div class="s-name">${s.name.substring(0,30)}</div>
+                <div class="s-name">${s.name.substring(0,32)}</div>
                 <div class="s-meta"><span>📍 ${s.loc}</span><span>⏱ ${s.dur}</span></div>
             </div>
-            <button class="s-play" onclick="event.stopPropagation();playSound(${s.id})">${curSound?.id === s.id && playing ? '⏸' : '▶'}</button>
-            <button class="s-fav ${favorites.some(f => f.id === s.id) ? 'favd' : ''}" onclick="event.stopPropagation();togFav(${s.id})">♥</button>
+            <button class="s-play" onclick="event.stopPropagation();playSound(${s.id})">${curSound?.id===s.id&&playing?'⏸':'▶'}</button>
+            <button class="s-fav ${favorites.some(f=>f.id===s.id)?'favd':''}" onclick="event.stopPropagation();togFav(${s.id})">♥</button>
         </div>
     `).join('');
 }
 
-function filterCat(cat, el) {
+function filterCat(cat) {
     curCat = cat;
-    document.querySelectorAll('.cat').forEach(c => c.classList.remove('active'));
-    if (el) el.classList.add('active');
-    else document.getElementById('cat-' + cat)?.classList.add('active');
-    const label = cat === 'all' ? '🔥 All Sounds' : `${CATS[cat]?.icon || '🌍'} ${cat.charAt(0).toUpperCase() + cat.slice(1)} Sounds`;
-    document.getElementById('listLabel').textContent = label;
-    document.getElementById('sbTitle').textContent = label;
-    renderList(cat === 'all' ? allSounds : allSounds.filter(s => s.cat === cat));
+    document.querySelectorAll('.cat-pill').forEach(c=>c.classList.toggle('active', c.dataset.cat===cat));
+    document.getElementById('lpTitle').textContent = cat==='all'?'🎵 All Sounds':`${CATS[cat]?.icon||'🌍'} ${cat.charAt(0).toUpperCase()+cat.slice(1)}`;
+    const d = cat==='all'?allSounds:allSounds.filter(s=>s.cat===cat);
+    document.getElementById('lpCount').textContent = `${d.length} sounds`;
+    renderList(d);
 }
+
+function showAll() { filterCat('all'); document.querySelectorAll('.bn').forEach(b=>b.classList.remove('active')); document.querySelector('.bn:first-child').classList.add('active'); }
 
 // SEARCH
 async function doSearch(q) {
-    if (!q.trim()) { filterCat('all'); document.querySelector('.cat').click(); return; }
-    document.getElementById('soundList').innerHTML = '<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:12px;">🔍 Searching...</div>';
+    if (!q.trim()) { filterCat('all'); return; }
+    document.getElementById('soundsList').innerHTML='<div style="padding:30px;text-align:center;color:var(--text3);font-size:13px;">🔍 Searching Freesound...</div>';
     try {
-        const url = `${API_BASE}/search/text/?query=${encodeURIComponent(q)}&fields=id,name,previews,duration,username&page_size=20&token=${API_KEY}`;
+        const url = `${API_BASE}/search/text/?query=${encodeURIComponent(q)}&fields=id,name,previews,duration,username&page_size=25&token=${API_KEY}`;
         const resp = await fetch(url);
         const data = await resp.json();
         if (data.results?.length) {
-            searchResults = data.results.map((s, i) => {
-                const loc = LOCS[i % LOCS.length];
+            searchResults = data.results.map((s,i) => {
+                const loc = LOCS[i%LOCS.length];
                 const au = s.previews?.['preview-hq-mp3'] || s.previews?.['preview-lq-mp3'];
-                return { id: 10000+i, name: s.name, loc: loc.n, cat: 'search', lat: loc.lat, lng: loc.lng, icon: '🔍', dur: fmtDur(s.duration), by: s.username, url: au };
-            }).filter(s => s.url);
-            curCat = 'search';
-            document.querySelectorAll('.cat').forEach(c => c.classList.remove('active'));
-            document.getElementById('listLabel').textContent = `🔍 Found ${searchResults.length} sounds for "${q}"`;
-            document.getElementById('sbTitle').textContent = `🔍 "${q}"`;
+                return { id:10000+i, name:s.name, loc:loc.n, cat:'search', lat:loc.lat, lng:loc.lng, icon:'🔍', dur:fmtDur(s.duration), by:s.username, url:au };
+            }).filter(s=>s.url);
+            document.getElementById('lpTitle').textContent = `🔍 "${q}"`;
+            document.getElementById('lpCount').textContent = `${searchResults.length} found`;
             renderList(searchResults);
             toast(`🔍 Found ${searchResults.length} sounds`);
         } else {
-            document.getElementById('soundList').innerHTML = `<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:12px;">😔 No sounds found for "${q}"</div>`;
+            document.getElementById('soundsList').innerHTML=`<div style="padding:30px;text-align:center;color:var(--text3);font-size:13px;">😔 No sounds found for "${q}"</div>`;
         }
-    } catch (e) { console.error(e); toast('Search failed'); }
+    } catch(e) { console.error(e); toast('⚠️ Search failed'); }
 }
 
 // FAVORITES
 function togFav(id) {
-    const s = allSounds.find(x => x.id === id) || searchResults.find(x => x.id === id);
+    const s = allSounds.find(x=>x.id===id) || searchResults.find(x=>x.id===id);
     if (!s) return;
-    const i = favorites.findIndex(f => f.id === s.id);
-    if (i >= 0) { favorites.splice(i, 1); toast('Removed from favorites'); } else { favorites.push(s); toast('Added to favorites ❤️'); }
-    renderList(curCat === 'all' ? allSounds : curCat === 'search' ? searchResults : allSounds.filter(x => x.cat === curCat));
+    const i = favorites.findIndex(f=>f.id===s.id);
+    if (i>=0) { favorites.splice(i,1); toast('Removed'); } else { favorites.push(s); toast('Added ❤️'); }
+    renderList(curCat==='all'?allSounds:curCat==='search'?searchResults:allSounds.filter(x=>x.cat===curCat));
 }
-
 function addRecent(s) {
-    recents = recents.filter(x => x.id !== s.id);
+    recents = recents.filter(x=>x.id!==s.id);
     recents.unshift(s);
-    if (recents.length > 20) recents.pop();
+    if (recents.length>25) recents.pop();
 }
 
-// UI
-function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
-function resetMap() { map.setView([20, 0], 2); }
+// PANELS
 function openPanel(type) {
-    let html = '';
-    if (type === 'fav') {
-        html = favorites.length ? favorites.map(s => `<div class="s-item" onclick="playSound(${s.id})"><div class="s-icon">${s.icon}</div><div class="s-info"><div class="s-name">${s.name}</div><div class="s-meta"><span>📍 ${s.loc}</span></div></div></div>`).join('') : '<div style="padding:30px;text-align:center;color:rgba(255,255,255,.3);font-size:13px;">💔 No favorites yet.<br><br>Tap ♥ on any sound to save.</div>';
-        toast('❤️ Favorites');
-    } else if (type === 'recent') {
-        html = recents.length ? recents.map(s => `<div class="s-item" onclick="playSound(${s.id})"><div class="s-icon">${s.icon}</div><div class="s-info"><div class="s-name">${s.name}</div><div class="s-meta"><span>📍 ${s.loc}</span></div></div></div>`).join('') : '<div style="padding:30px;text-align:center;color:rgba(255,255,255,.3);font-size:13px;">🕐 No recent plays yet.</div>';
-        toast('🕐 Recently Played');
-    } else if (type === 'sleep') {
-        html = `<div style="padding:10px;text-align:center;color:rgba(255,255,255,.5);font-size:12px;margin-bottom:12px;">Set a timer to stop playback</div>
-            <div style="display:flex;flex-direction:column;gap:6px;">
-                <button class="cat" style="width:100%;text-align:center;padding:10px;" onclick="setSleep(15)">15 minutes</button>
-                <button class="cat" style="width:100%;text-align:center;padding:10px;" onclick="setSleep(30)">30 minutes</button>
-                <button class="cat" style="width:100%;text-align:center;padding:10px;" onclick="setSleep(60)">1 hour</button>
+    let html='', title='';
+    if (type==='fav') {
+        title = '❤️ Favorites';
+        html = favorites.length ? favorites.map(s=>`<div class="s-card" onclick="playSound(${s.id});"><div class="s-ico">${s.icon}</div><div class="s-info"><div class="s-name">${s.name}</div><div class="s-meta"><span>📍 ${s.loc}</span></div></div></div>`).join('') : '<div style="padding:30px;text-align:center;color:var(--text3);font-size:13px;">💔 No favorites yet.<br><br>Tap ♥ on any sound.</div>';
+    } else if (type==='recent') {
+        title = '🕐 Recently Played';
+        html = recents.length ? recents.map(s=>`<div class="s-card" onclick="playSound(${s.id});"><div class="s-ico">${s.icon}</div><div class="s-info"><div class="s-name">${s.name}</div><div class="s-meta"><span>📍 ${s.loc}</span></div></div></div>`).join('') : '<div style="padding:30px;text-align:center;color:var(--text3);font-size:13px;">🕐 No recent plays.</div>';
+    } else if (type==='sleep') {
+        title = '😴 Sleep Timer';
+        html = `<div style="text-align:center;color:var(--text2);font-size:12px;margin-bottom:14px;">Set timer to stop playback</div>
+            <div style="display:flex;flex-direction:column;gap:8px;max-width:250px;margin:0 auto;">
+                <div class="cat-pill" style="text-align:center;padding:12px;" onclick="setSleep(15)">⏱ 15 minutes</div>
+                <div class="cat-pill" style="text-align:center;padding:12px;" onclick="setSleep(30)">⏱ 30 minutes</div>
+                <div class="cat-pill" style="text-align:center;padding:12px;" onclick="setSleep(60)">⏱ 1 hour</div>
             </div>`;
-        toast('😴 Sleep Timer');
     }
-    // Show as toast-like panel at bottom
+    // In toast area
     const t = document.getElementById('toast');
-    t.innerHTML = `<div style="max-height:300px;overflow-y:auto;">${html}</div>`;
+    t.innerHTML = `<div style="text-align:left;"><div style="font-weight:600;margin-bottom:10px;font-size:14px;">${title}</div><div style="max-height:250px;overflow-y:auto;">${html}</div></div>`;
     t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 5000);
+    setTimeout(()=>t.classList.remove('show'),4000);
 }
-
 function setSleep(min) {
-    if (min > 0) { setTimeout(() => { audio.pause(); playing = false; updateBtn(); stopViz(); }, min * 60000); toast(`😴 Sleep timer: ${min} min`); }
+    if (min>0) { setTimeout(()=>{ audio.pause(); playing=false; updBtn(); stopViz(); }, min*60000); toast(`😴 ${min} min timer set`); }
     document.getElementById('toast').classList.remove('show');
 }
 
 function toast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg; t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2500);
+    const t=document.getElementById('toast');
+    t.textContent=msg; t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'),2500);
 }
+function resetMap() { map.setView([20,0],2); }
 
 // KEYBOARD
-document.addEventListener('keydown', e => {
-    if (e.target.tagName === 'INPUT') return;
-    if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
-    else if (e.code === 'ArrowRight') nextSound();
-    else if (e.code === 'ArrowLeft') prevSound();
+document.addEventListener('keydown', e=>{
+    if(e.target.tagName==='INPUT') return;
+    if(e.code==='Space'){e.preventDefault();togglePlay();}
+    else if(e.code==='ArrowRight') nextSound();
+    else if(e.code==='ArrowLeft') prevSound();
 });
-
-// PROGRESS SEEK
-document.getElementById('progWrap').addEventListener('click', seekAudio);
+document.getElementById('progBar').addEventListener('click', seekAudio);
 
 init();
 </script>
